@@ -1,0 +1,65 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\MSA\\Fall 2024\\HCI\\Project\\Phase II (after mid)\\Markers\\Markers\\TUIO11_NET-master\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{83F18314-A320-4148-A5A5-D8FD091FC407}|TUIO_DEMO.csproj|d:\\msa\\fall 2024\\hci\\project\\phase ii (after mid)\\markers\\markers\\tuio11_net-master\\tuiodemo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{83F18314-A320-4148-A5A5-D8FD091FC407}|TUIO_DEMO.csproj|solutionrelative:tuiodemo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{83F18314-A320-4148-A5A5-D8FD091FC407}|TUIO_DEMO.csproj|D:\\MSA\\Fall 2024\\HCI\\Project\\Phase II (after mid)\\Markers\\Markers\\TUIO11_NET-master\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{83F18314-A320-4148-A5A5-D8FD091FC407}|TUIO_DEMO.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 3,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:130:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:129:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "TuioDemo.cs",
+              "DocumentMoniker": "D:\\MSA\\Fall 2024\\HCI\\Project\\Phase II (after mid)\\Markers\\Markers\\TUIO11_NET-master\\TuioDemo.cs",
+              "RelativeDocumentMoniker": "TuioDemo.cs",
+              "ToolTip": "D:\\MSA\\Fall 2024\\HCI\\Project\\Phase II (after mid)\\Markers\\Markers\\TUIO11_NET-master\\TuioDemo.cs",
+              "RelativeToolTip": "TuioDemo.cs",
+              "ViewState": "AQIAAL8AAAAAAAAAAAAUwBgCAAADAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-10-21T11:36:14.199Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Form1.cs",
+              "DocumentMoniker": "D:\\MSA\\Fall 2024\\HCI\\Project\\Phase II (after mid)\\Markers\\Markers\\TUIO11_NET-master\\Form1.cs",
+              "RelativeDocumentMoniker": "Form1.cs",
+              "ToolTip": "D:\\MSA\\Fall 2024\\HCI\\Project\\Phase II (after mid)\\Markers\\Markers\\TUIO11_NET-master\\Form1.cs",
+              "RelativeToolTip": "Form1.cs",
+              "ViewState": "AQIAAA4AAAAAAAAAAAAQwCgAAABAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-11-27T12:45:14.103Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
