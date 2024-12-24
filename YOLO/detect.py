@@ -48,7 +48,7 @@ def Face():
     else:
         matched_face = recognize_user_face(captured_face_path)
 
-        video_capture = cv2.VideoCapture(0)
+        video_capture = cv2.VideoCapture(1)
 
         # Start the timer
         start_time = time.time()

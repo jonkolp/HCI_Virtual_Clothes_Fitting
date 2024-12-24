@@ -99,7 +99,7 @@ def run_yolo_model():
     model = YOLO('Versions/best.pt')
 
     # Open video capture
-    cap = cv2.VideoCapture(0)  # Use the primary camera
+    cap = cv2.VideoCapture(1)  # Use the primary camera
 
     if not cap.isOpened():
         print("Failed to open camera.")
@@ -134,7 +134,7 @@ def run_mediapipe_hand_detection():
         - Stop: Terminate program and launch `emotions.py`.
         - Right: Stop Mediapipe if running.
     """
-    cap = cv2.VideoCapture(0)  # Open the primary camera
+    cap = cv2.VideoCapture(1)  # Open the primary camera
     last_gesture_time = 0 
 
     with mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7) as hands:

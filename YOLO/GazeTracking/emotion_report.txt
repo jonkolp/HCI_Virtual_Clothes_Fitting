@@ -1,0 +1,8 @@
+Majority Emotion Detected: neutral
+Emotion Distribution:
+neutral: 161
+sad: 52
+fear: 36
+angry: 8
+happy: 10
+surprise: 3

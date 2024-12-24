@@ -104,7 +104,7 @@ def bluetooth_login():
 
     def run_camera():
         nonlocal selected_index
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(1)
         last_gesture_time = 0 
         with mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7) as hands:
             while cap.isOpened():
@@ -160,7 +160,7 @@ def bluetooth_login():
             registered_users.add(selected_device[0])
         root.destroy()
 
-        
+
     selection_event.wait()
     root.destroy()
     if selected_device[0]:

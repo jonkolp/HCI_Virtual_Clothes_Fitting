@@ -307,7 +307,7 @@ Allpoints=[]
 
 
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 while cap.isOpened():
     success, frame = cap.read()

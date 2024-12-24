@@ -2,6 +2,7 @@ from BT2 import bluetooth_login
 from Yolo import run_mediapipe_hand_detection
 from detect import Face
 from save import register_face
+#from GazeTracking.example import Monitor
 from ultralytics import YOLO
 import mediapipe as mp
 import subprocess
@@ -13,6 +14,7 @@ import time
 if __name__ == "__main__":
     print("Starting the system...")
     #custom_model = YOLO('Versions/Hands.pt')q
+    #Monitor()
     flag = 0 
     flag2= 0
     trigger_object = "Thumbs up"  # Define the object to trigger Mediapipe
@@ -20,7 +22,7 @@ if __name__ == "__main__":
     mp_hands = mp.solutions.hands
     mp_drawing = mp.solutions.drawing_utils
     
-    cap = cv2.VideoCapture(0)  # Open the primary camera
+    cap = cv2.VideoCapture(1)  # Open the primary camera
     # Global variables to manage Mediapipe process
     mediapipe_running = False
     mediapipe_process = None
