@@ -1,59 +1,108 @@
 from BT2 import bluetooth_login
-from Yolo import run_yolo_and_trigger_mediapipe
+from Yolo import run_mediapipe_hand_detection
 from detect import Face
 from ultralytics import YOLO
+import mediapipe as mp
+import subprocess
+import threading
 import cv2
+import time
+
 
 if __name__ == "__main__":
     print("Starting the system...")
-    custom_model = YOLO('Versions/Hands.pt')
+    #custom_model = YOLO('Versions/Hands.pt')q
     flag = 0 
-    cap = cv2.VideoCapture(1)  # Start video capture
     trigger_object = "Thumbs up"  # Define the object to trigger Mediapipe
     trigger_object2 = "Thumbs Down"
+    mp_hands = mp.solutions.hands
+    mp_drawing = mp.solutions.drawing_utils
     
-    while cap.isOpened():
-        success, frame = cap.read()
-        if not success:
-            print("Failed to capture video. Exiting.")
-            break
+    cap = cv2.VideoCapture(0)  # Open the primary camera
+    # Global variables to manage Mediapipe process
+    mediapipe_running = False
+    mediapipe_process = None
+    def detect_gesture(landmarks):
+            """
+            Detect gestures based on hand landmarks with refined logic.
+            
+            Args:
+                landmarks (list): List of hand landmarks.
 
-        def check_detections(results, model_name):
-            global  flag
-            for result in results:
-                boxes = result.boxes
-                for box in boxes:
-                    cls = int(box.cls)  # Class ID
-                    label = model_name[cls]  # Class name
-                    print(f"Detected by {model_name}: {label}")
-                    
-                    # Trigger Mediapipe if the specific object is detected
-                    if label == trigger_object:
-                        flag=1
-                        print("Bluetooth")
-                    if label == trigger_object2:
-                        flag=2
-                        print("Face")
-                    if label == "Stop":
-                        cap.release()
-                        cv2.destroyAllWindows()
-                        return flag
+            Returns:
+                str: Detected gesture name or None if no gesture is recognized.
+            """
+            # Get key landmarks for analysis
+            thumb_tip = landmarks[4]
+            thumb_ip = landmarks[3]
+            index_tip = landmarks[8]
+            index_base = landmarks[5]
+            middle_tip = landmarks[12]
+            middle_base = landmarks[9]
 
-            return 0
-        
-        custom_results = custom_model(frame)  # Inference with custom model
-        if check_detections(custom_results, custom_model.names):
-            break  # Stop if trigger is detected by custom model
+            # Gesture: "Thumbs down" (Thumb bent downward)
+            if thumb_tip.y > thumb_ip.y and index_tip.y > index_base.y and middle_tip.y > middle_base.y:
+                return "Thumbs down"
 
-        annotated_custom_frame = custom_results[0].plot()
-        if check_detections(custom_results, custom_model.names) == "exit":
-            print("Exiting program due to 'Thumbs down' gesture.")
-            exit()
-        
-        cv2.imshow("YOLO Detection",  annotated_custom_frame)
+            # Gesture: "Thumbs up" (Thumb extended upward and above other fingers)
+            if thumb_tip.y < thumb_ip.y and thumb_tip.y < index_base.y and middle_tip.y > middle_base.y:
+                return "Thumbs up"
 
-        if cv2.waitKey(1) & 0xFF == 27:  # Press 'Esc' to exit
-            break
+            # Gesture: "Stop" (Index finger pointing upward)
+            if index_tip.y < index_base.y and thumb_tip.x < thumb_ip.x:  # Index finger is up and thumb is closed
+                return "Stop"
+
+            # Gesture: "Right" (Hand rotated with index and thumb extended horizontally)
+            if index_tip.x > index_base.x and thumb_tip.x > thumb_ip.x and thumb_tip.y > thumb_ip.y:
+                return "Right"
+
+            # Add more gestures as needed
+            return None
+    
+    last_gesture_time = 0 
+    with mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7) as hands:
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    print("Failed to capture video.")
+                    break
+
+                # Convert frame to RGB for MediaPipe processing
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = hands.process(rgb_frame)
+
+                if results.multi_hand_landmarks:
+                    for hand_landmarks in results.multi_hand_landmarks:
+                        # Draw hand landmarks on the frame
+                        mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                        
+                        # Detect gestures
+                        current_time = time.time()
+                        if current_time - last_gesture_time >= 2:
+                            gesture = detect_gesture(hand_landmarks.landmark)
+                            if gesture:
+                                print(f"Detected gesture: {gesture}")
+                                last_gesture_time = current_time
+
+                                if gesture == "Thumbs up":
+                                    flag=1
+                                    print("Bluettooth login...")
+                                elif gesture == "Thumbs down":
+                                    flag=2
+                                    print("Face login...")
+                                
+                                #elif gesture == "Stop":
+                                    #cap.release()
+                                    #cv2.destroyAllWindows()
+                                    #break
+                            
+                                
+
+                # Display the frame with landmarks
+                cv2.imshow("MediaPipe Hand Detection", frame)
+
+                if cv2.waitKey(1) & 0xFF == 27:  # Press 'Esc' to exit
+                    break
 
     cap.release()
     cv2.destroyAllWindows()
@@ -65,11 +114,11 @@ if __name__ == "__main__":
             print("Login successful. Starting YOLO detection.")
             
             # Step 2: YOLO Object Detection and Mediapipe Trigger
-            run_yolo_and_trigger_mediapipe()
+            run_mediapipe_hand_detection()
     elif(flag==2):
         enter=Face()
         if(enter==1):
-            run_yolo_and_trigger_mediapipe()
+            run_mediapipe_hand_detection()
         else:
             print("no face")
 

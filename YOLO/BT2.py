@@ -4,10 +4,12 @@ import cv2
 from ultralytics import YOLO
 import tkinter as tk
 from tkinter import StringVar
+import mediapipe as mp
+import time
 
-# Load your gesture detection model
-gesture_model = YOLO('Versions/Hands.pt')
-
+# Load your gesture detection mode
+mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
 def load_registered_users(file_path="registered_users.txt"):
     """Load registered MAC addresses from a file."""
     try:
@@ -69,51 +71,93 @@ def bluetooth_login():
     def update_gui():
         """Update the GUI to show the currently selected device."""
         selected_device_var.set(f"Selected: {devices[selected_index][1]} [{devices[selected_index][0]}]")
+    
+
+    def detect_gesture(landmarks):
+        """
+        Detect gestures based on hand landmarks with refined logic.
+        
+        Args:
+            landmarks (list): List of hand landmarks.
+
+        Returns:
+            str: Detected gesture name or None if no gesture is recognized.
+        """
+        # Get key landmarks for analysis
+        thumb_tip = landmarks[4]
+        thumb_ip = landmarks[3]
+        index_tip = landmarks[8]
+        index_base = landmarks[5]
+        middle_tip = landmarks[12]
+        middle_base = landmarks[9]
+
+        # Gesture: "Thumbs down" (Thumb bent downward)
+        if thumb_tip.y > thumb_ip.y and index_tip.y > index_base.y and middle_tip.y > middle_base.y:
+            return "Thumbs down"
+
+        # Gesture: "Thumbs up" (Thumb extended upward and above other fingers)
+        if thumb_tip.y < thumb_ip.y and thumb_tip.y < index_base.y and middle_tip.y > middle_base.y:
+            return "Thumbs up"
+
+        # Gesture: "Stop" (Index finger pointing upward)
+        if index_tip.y < index_base.y and thumb_tip.x < thumb_ip.x:  # Index finger is up and thumb is closed
+            return "Stop"
+
+        # Gesture: "Right" (Hand rotated with index and thumb extended horizontally)
+        if index_tip.x > index_base.x and thumb_tip.x > thumb_ip.x and thumb_tip.y > thumb_ip.y:
+            return "Right"
+
+        # Add more gestures as needed
+        return None
 
     def run_camera():
-        """Run the camera loop for gesture detection."""
+        """Run the camera loop for gesture detection with MediaPipe."""
         nonlocal selected_index  # Ensure we can modify the outer scope variable
-        cap = cv2.VideoCapture(1)  # Start the camera feed
+        cap = cv2.VideoCapture(0)  # Use the primary camera
+        last_gesture_time = 0 
+        with mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7) as hands:
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    print("Failed to capture video.")
+                    break
+                
+                # Convert frame to RGB for MediaPipe
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = hands.process(rgb_frame)
+                
+                if results.multi_hand_landmarks:
+                    for hand_landmarks in results.multi_hand_landmarks:
+                        # Draw landmarks on the hand
+                        mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-        while cap.isOpened():
-            success, frame = cap.read()
-            if not success:
-                print("Failed to capture video. Exiting.")
-                break
+                        # Detect gesture
+                        current_time = time.time()
+                        if current_time - last_gesture_time >= 2: 
+                            gesture = detect_gesture(hand_landmarks.landmark)
+                            if gesture:
+                                last_gesture_time = current_time
+                                if gesture == "Thumbs up":
+                                    selected_index = (selected_index + 1) % len(devices)
+                                    print(f"Selected next device: {devices[selected_index][1]}")
+                                    update_gui()
+                                elif gesture == "Thumbs down":
+                                    selected_index = (selected_index - 1) % len(devices)
+                                    print(f"Selected previous device: {devices[selected_index][1]}")
+                                    update_gui()
+                                elif gesture == "Stop":
+                                    print(f"Device selected: {devices[selected_index][1]}")
+                                    selected_device[0] = devices[selected_index][0]
+                                    selected_device[1] = devices[selected_index][1]
+                                    selection_event.set()
+                                    cap.release()
+                                    cv2.destroyAllWindows()
+                                    root.quit()
+                                    return
 
-            # Detect gestures using YOLO model
-            results = gesture_model(frame)  # Run YOLO inference
-            for result in results:
-                for box in result.boxes:
-                    cls = int(box.cls)  # Class ID
-                    label = gesture_model.model.names[cls]  # Gesture label
-                    print(f"Detected gesture: {label}")
-
-                    # Handle gestures for navigation
-                    if label == "Thumbs up":
-                        selected_index = (selected_index + 1) % len(devices)
-                        print(f"Selected next device: {devices[selected_index][1]}")
-                        update_gui()  # Update the GUI with the new selection
-                    elif label == "Thumbs Down":
-                        selected_index = (selected_index - 1) % len(devices)
-                        print(f"Selected previous device: {devices[selected_index][1]}")
-                        update_gui()  # Update the GUI with the new selection
-                    elif label == "Stop":
-                        print(f"Device selected: {devices[selected_index][1]}")
-                        selected_device[0] = devices[selected_index][0]  # MAC address
-                        selected_device[1] = devices[selected_index][1]  # Name
-                        selection_event.set()  # Notify the main thread of the selection
-                        cap.release()
-                        cv2.destroyAllWindows()
-                        root.quit()  # Close the main GUI immediately
-                        return
-
-            # Annotate and display the video feed with YOLO results
-            annotated_frame = results[0].plot()
-            cv2.imshow("Gesture Detection", annotated_frame)
-
-            if cv2.waitKey(1) & 0xFF == 27:  # Press 'Esc' to exit
-                break
+                cv2.imshow("Gesture Detection", frame)
+                if cv2.waitKey(1) & 0xFF == 27:  # Press 'Esc' to exit
+                    break
 
         cap.release()
         cv2.destroyAllWindows()
