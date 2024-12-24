@@ -1,6 +1,7 @@
 from BT2 import bluetooth_login
 from Yolo import run_mediapipe_hand_detection
 from detect import Face
+from save import register_face
 from ultralytics import YOLO
 import mediapipe as mp
 import subprocess
@@ -13,6 +14,7 @@ if __name__ == "__main__":
     print("Starting the system...")
     #custom_model = YOLO('Versions/Hands.pt')q
     flag = 0 
+    flag2= 0
     trigger_object = "Thumbs up"  # Define the object to trigger Mediapipe
     trigger_object2 = "Thumbs Down"
     mp_hands = mp.solutions.hands
@@ -23,41 +25,64 @@ if __name__ == "__main__":
     mediapipe_running = False
     mediapipe_process = None
     def detect_gesture(landmarks):
-            """
-            Detect gestures based on hand landmarks with refined logic.
-            
-            Args:
-                landmarks (list): List of hand landmarks.
+        """
+        Detect gestures based on hand landmarks with refined logic.
 
-            Returns:
-                str: Detected gesture name or None if no gesture is recognized.
-            """
-            # Get key landmarks for analysis
-            thumb_tip = landmarks[4]
-            thumb_ip = landmarks[3]
-            index_tip = landmarks[8]
-            index_base = landmarks[5]
-            middle_tip = landmarks[12]
-            middle_base = landmarks[9]
+        Args:
+            landmarks (list): List of hand landmarks.
 
-            # Gesture: "Thumbs down" (Thumb bent downward)
-            if thumb_tip.y > thumb_ip.y and index_tip.y > index_base.y and middle_tip.y > middle_base.y:
-                return "Thumbs down"
+        Returns:
+            str: Detected gesture name or None if no gesture is recognized.
+        """
+        # Get key landmarks for analysis
+        thumb_tip = landmarks[4]
+        thumb_ip = landmarks[3]
+        index_tip = landmarks[8]
+        index_base = landmarks[5]
+        middle_tip = landmarks[12]
+        middle_base = landmarks[9]
+        ring_tip = landmarks[16]
+        ring_base = landmarks[13]
+        pinky_tip = landmarks[20]
+        pinky_base = landmarks[17]
 
-            # Gesture: "Thumbs up" (Thumb extended upward and above other fingers)
-            if thumb_tip.y < thumb_ip.y and thumb_tip.y < index_base.y and middle_tip.y > middle_base.y:
-                return "Thumbs up"
+        # Gesture: "Stop" (All 4 fingers extended upward)
+        if (
+           
+            index_tip.y < index_base.y and
+            middle_tip.y < middle_base.y and
+            ring_tip.y < ring_base.y and
+            pinky_tip.y < pinky_base.y
+        ):
+            return "Stop"
 
-            # Gesture: "Stop" (Index finger pointing upward)
-            if index_tip.y < index_base.y and thumb_tip.x < thumb_ip.x:  # Index finger is up and thumb is closed
-                return "Stop"
+        # Gesture: "Thumbs down" (Thumb bent downward)
+        if (
+            thumb_tip.y > thumb_ip.y and 
+            index_tip.y > index_base.y and 
+            middle_tip.y > middle_base.y
+        ):
+            return "Thumbs down"
 
-            # Gesture: "Right" (Hand rotated with index and thumb extended horizontally)
-            if index_tip.x > index_base.x and thumb_tip.x > thumb_ip.x and thumb_tip.y > thumb_ip.y:
-                return "Right"
+        # Gesture: "Thumbs up" (Thumb extended upward and above other fingers)
+        if (
+            thumb_tip.y < thumb_ip.y and 
+            thumb_tip.y < index_base.y and 
+            middle_tip.y > middle_base.y
+        ):
+            return "Thumbs up"
 
-            # Add more gestures as needed
-            return None
+        # Gesture: "Right" (Hand rotated with index and thumb extended horizontally)
+        if (
+            index_tip.x > index_base.x and 
+            thumb_tip.x > thumb_ip.x and 
+            thumb_tip.y > thumb_ip.y
+        ):
+            return "Right"
+
+        # Add more gestures as needed
+        return None
+
     
     last_gesture_time = 0 
     with mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7) as hands:
@@ -91,10 +116,14 @@ if __name__ == "__main__":
                                     flag=2
                                     print("Face login...")
                                 
-                                #elif gesture == "Stop":
-                                    #cap.release()
-                                    #cv2.destroyAllWindows()
-                                    #break
+                                elif gesture == "Stop":
+                                    if(flag==1):
+                                        flag2=1
+                                    elif(flag==2):
+                                        flag2=2
+                                    cap.release()
+                                    cv2.destroyAllWindows()
+                                    break
                             
                                 
 
@@ -106,7 +135,7 @@ if __name__ == "__main__":
 
     cap.release()
     cv2.destroyAllWindows()
-    if(flag==1):
+    if(flag2==1):
         mac_address = bluetooth_login()
         if not mac_address:
             print("Exiting due to unsuccessful login.")
@@ -115,10 +144,14 @@ if __name__ == "__main__":
             
             # Step 2: YOLO Object Detection and Mediapipe Trigger
             run_mediapipe_hand_detection()
-    elif(flag==2):
+    elif(flag2==2):
         enter=Face()
-        if(enter==1):
-            run_mediapipe_hand_detection()
+        if(enter==None):
+           print("no face is registered")
+           print("Please register your face first")
+           register_face()
+
         else:
-            print("no face")
+            run_mediapipe_hand_detection()
+            
 

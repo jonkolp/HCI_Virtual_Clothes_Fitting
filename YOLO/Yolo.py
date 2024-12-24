@@ -17,7 +17,7 @@ mediapipe_process = None
 def detect_gesture(landmarks):
         """
         Detect gestures based on hand landmarks with refined logic.
-        
+
         Args:
             landmarks (list): List of hand landmarks.
 
@@ -31,25 +31,44 @@ def detect_gesture(landmarks):
         index_base = landmarks[5]
         middle_tip = landmarks[12]
         middle_base = landmarks[9]
+        ring_tip = landmarks[16]
+        ring_base = landmarks[13]
+        pinky_tip = landmarks[20]
+        pinky_base = landmarks[17]
+
+        # Gesture: "Stop" (All 4 fingers extended upward)
+        if (
+           
+            index_tip.y < index_base.y and
+            middle_tip.y < middle_base.y and
+            ring_tip.y < ring_base.y and
+            pinky_tip.y < pinky_base.y
+        ):
+            return "Stop"
 
         # Gesture: "Thumbs down" (Thumb bent downward)
-        if thumb_tip.y > thumb_ip.y and index_tip.y > index_base.y and middle_tip.y > middle_base.y:
+        if (
+            thumb_tip.y > thumb_ip.y and 
+            index_tip.y > index_base.y and 
+            middle_tip.y > middle_base.y
+        ):
             return "Thumbs down"
 
         # Gesture: "Thumbs up" (Thumb extended upward and above other fingers)
-        if thumb_tip.y < thumb_ip.y and thumb_tip.y < index_base.y and middle_tip.y > middle_base.y:
+        if (
+            thumb_tip.y < thumb_ip.y and 
+            thumb_tip.y < index_base.y and 
+            middle_tip.y > middle_base.y
+        ):
             return "Thumbs up"
 
-        # Gesture: "Stop" (Index finger pointing upward)
-        if index_tip.y < index_base.y and thumb_tip.x < thumb_ip.x:  # Index finger is up and thumb is closed
-            return "Stop"
-
         # Gesture: "Right" (Hand rotated with index and thumb extended horizontally)
-        if index_tip.x > index_base.x and thumb_tip.x > thumb_ip.x and thumb_tip.y > thumb_ip.y:
+        if (
+            index_tip.x > index_base.x and 
+            thumb_tip.x > thumb_ip.x and 
+            thumb_tip.y > thumb_ip.y
+        ):
             return "Right"
-        
-        if index_tip.x < index_base.x and thumb_tip.x < thumb_ip.x and thumb_tip.y > thumb_ip.y:
-            return "Left"
 
         # Add more gestures as needed
         return None

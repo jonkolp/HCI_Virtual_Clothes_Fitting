@@ -45,57 +45,50 @@ def Face():
     if not captured_face_path:
         print("No face was captured.")
         return None  # Return None if no face is captured
+    else:
+        matched_face = recognize_user_face(captured_face_path)
 
-    matched_face = recognize_user_face(captured_face_path)
+        video_capture = cv2.VideoCapture(0)
 
-    video_capture = cv2.VideoCapture(0)
+        # Start the timer
+        start_time = time.time()
 
-    # Start the timer
-    start_time = time.time()
+        while True:
+            ret, frame = video_capture.read()
+            if not ret:
+                break
 
-    while True:
-        ret, frame = video_capture.read()
-        if not ret:
-            break
+            face_locations = face_recognition.face_locations(frame)
 
-        face_locations = face_recognition.face_locations(frame)
+            if len(face_locations) > 0:
+                top, right, bottom, left = face_locations[0]
 
-        if len(face_locations) > 0:
-            top, right, bottom, left = face_locations[0]
+                # Draw a rectangle around the detected face
+                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
 
-            # Draw a rectangle around the detected face
-            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+                # Display the recognized name if matched
+                if matched_face:
+                    cv2.putText(
+                        frame,
+                        matched_face,
+                        (left, top - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.9,
+                        (0, 255, 0),
+                        2,
+                    )
+                else:
+                    return None
+                
 
-            # Display the recognized name if matched
-            if matched_face:
-                cv2.putText(
-                    frame,
-                    matched_face,
-                    (left, top - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.9,
-                    (0, 255, 0),
-                    2,
-                )
-            else:
-                cv2.putText(
-                    frame,
-                    "Unknown",
-                    (left, top - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.9,
-                    (0, 0, 255),
-                    2,
-                )
+            # Show the video frame with the name overlay
+            cv2.imshow("Face Recognition", frame)
 
-        # Show the video frame with the name overlay
-        cv2.imshow("Face Recognition", frame)
+            # Check if 5 seconds have passed or 'q' is pressed
+            if (time.time() - start_time > 5) or (cv2.waitKey(1) & 0xFF == ord('q')):
+                break
 
-        # Check if 5 seconds have passed or 'q' is pressed
-        if (time.time() - start_time > 5) or (cv2.waitKey(1) & 0xFF == ord('q')):
-            break
+        video_capture.release()
+        cv2.destroyAllWindows()
 
-    video_capture.release()
-    cv2.destroyAllWindows()
-
-    return 1 
+        return 1 

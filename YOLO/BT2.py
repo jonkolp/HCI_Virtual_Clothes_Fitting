@@ -1,16 +1,19 @@
 import threading
 import bluetooth
 import cv2
-from ultralytics import YOLO
+import os
 import tkinter as tk
-from tkinter import StringVar
+from tkinter import StringVar, messagebox
 import mediapipe as mp
 import time
 
-# Load your gesture detection mode
+# Load MediaPipe for gesture detection
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
-def load_registered_users(file_path="registered_users.txt"):
+
+REGISTERED_USERS_FILE = "registered_users.txt"
+
+def load_registered_users(file_path=REGISTERED_USERS_FILE):
     """Load registered MAC addresses from a file."""
     try:
         with open(file_path, 'r') as file:
@@ -20,6 +23,12 @@ def load_registered_users(file_path="registered_users.txt"):
         print(f"File {file_path} not found. No registered users.")
         return set()
 
+def save_registered_user(device_mac, file_path=REGISTERED_USERS_FILE):
+    """Save a new MAC address to the registered users file."""
+    with open(file_path, 'a') as file:
+        file.write(f"{device_mac}\n")
+    print(f"Device with MAC address {device_mac} has been registered.")
+
 def is_user_registered(device_mac, registered_users):
     """Check if a device MAC address is registered."""
     return device_mac in registered_users
@@ -28,7 +37,7 @@ def bluetooth_login():
     """Select a Bluetooth device using gestures with GUI feedback."""
     print("Scanning for Bluetooth devices...")
     devices = bluetooth.discover_devices(lookup_names=True)
-    
+
     if not devices:
         print("No Bluetooth devices found. Ensure Bluetooth is enabled.")
         return None
@@ -41,79 +50,61 @@ def bluetooth_login():
     registered_users = load_registered_users()
     print("Registered MAC addresses loaded.")
 
-    # Filter devices to only show those with registered MAC addresses
-    devices = [(addr, name) for addr, name in devices if is_user_registered(addr, registered_users)]
-    if not devices:
-        print("No devices found with registered MAC addresses.")
-        return None
-
     # Index for tracking the currently selected device
     selected_index = 0
-
-    # Shared variable to store the selected device
-    selected_device = [None, None]  # Use a mutable container to store both MAC and name
+    selected_device = [None, None]  # Mutable container for selected MAC and name
     selection_event = threading.Event()
 
-    # Create a GUI for displaying the selected device
+    # Create GUI
     root = tk.Tk()
     root.title("Bluetooth Device Selection")
     root.geometry("400x200")
 
     selected_device_var = StringVar()
-    selected_device_var.set(f"Selected: {devices[selected_index][1]} [{devices[selected_index][0]}]")
-
     label = tk.Label(root, textvariable=selected_device_var, font=("Helvetica", 14), pady=20)
     label.pack()
 
-    instruction_label = tk.Label(root, text="Use gestures to navigate:\n- 'Thumbs up' for next\n- 'Thumbs down' for previous\n- 'Stop' to select", font=("Helvetica", 10))
-    instruction_label.pack()
-
     def update_gui():
         """Update the GUI to show the currently selected device."""
-        selected_device_var.set(f"Selected: {devices[selected_index][1]} [{devices[selected_index][0]}]")
-    
+        if devices:
+            selected_device_var.set(f"Selected: {devices[selected_index][1]} [{devices[selected_index][0]}]")
+        else:
+            selected_device_var.set("No devices available.")
+
+    update_gui()
 
     def detect_gesture(landmarks):
-        """
-        Detect gestures based on hand landmarks with refined logic.
-        
-        Args:
-            landmarks (list): List of hand landmarks.
-
-        Returns:
-            str: Detected gesture name or None if no gesture is recognized.
-        """
-        # Get key landmarks for analysis
+        """Detect gestures based on hand landmarks."""
         thumb_tip = landmarks[4]
         thumb_ip = landmarks[3]
         index_tip = landmarks[8]
         index_base = landmarks[5]
         middle_tip = landmarks[12]
         middle_base = landmarks[9]
+        ring_tip = landmarks[16]
+        ring_base = landmarks[13]
+        pinky_tip = landmarks[20]
+        pinky_base = landmarks[17]
 
-        # Gesture: "Thumbs down" (Thumb bent downward)
+        if (
+            index_tip.y < index_base.y and
+            middle_tip.y < middle_base.y and
+            ring_tip.y < ring_base.y and
+            pinky_tip.y < pinky_base.y
+        ):
+            return "Stop"
+
         if thumb_tip.y > thumb_ip.y and index_tip.y > index_base.y and middle_tip.y > middle_base.y:
             return "Thumbs down"
 
-        # Gesture: "Thumbs up" (Thumb extended upward and above other fingers)
         if thumb_tip.y < thumb_ip.y and thumb_tip.y < index_base.y and middle_tip.y > middle_base.y:
             return "Thumbs up"
 
-        # Gesture: "Stop" (Index finger pointing upward)
-        if index_tip.y < index_base.y and thumb_tip.x < thumb_ip.x:  # Index finger is up and thumb is closed
-            return "Stop"
-
-        # Gesture: "Right" (Hand rotated with index and thumb extended horizontally)
-        if index_tip.x > index_base.x and thumb_tip.x > thumb_ip.x and thumb_tip.y > thumb_ip.y:
-            return "Right"
-
-        # Add more gestures as needed
         return None
 
     def run_camera():
-        """Run the camera loop for gesture detection with MediaPipe."""
-        nonlocal selected_index  # Ensure we can modify the outer scope variable
-        cap = cv2.VideoCapture(0)  # Use the primary camera
+        nonlocal selected_index
+        cap = cv2.VideoCapture(0)
         last_gesture_time = 0 
         with mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7) as hands:
             while cap.isOpened():
@@ -121,21 +112,17 @@ def bluetooth_login():
                 if not ret:
                     print("Failed to capture video.")
                     break
-                
-                # Convert frame to RGB for MediaPipe
+
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 results = hands.process(rgb_frame)
-                
+
                 if results.multi_hand_landmarks:
                     for hand_landmarks in results.multi_hand_landmarks:
-                        # Draw landmarks on the hand
                         mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
-                        # Detect gesture
                         current_time = time.time()
-                        if current_time - last_gesture_time >= 2: 
+                        if current_time - last_gesture_time >= 2:
                             gesture = detect_gesture(hand_landmarks.landmark)
-                            if gesture:
+                            if gesture: 
                                 last_gesture_time = current_time
                                 if gesture == "Thumbs up":
                                     selected_index = (selected_index + 1) % len(devices)
@@ -156,24 +143,28 @@ def bluetooth_login():
                                     return
 
                 cv2.imshow("Gesture Detection", frame)
-                if cv2.waitKey(1) & 0xFF == 27:  # Press 'Esc' to exit
+                if cv2.waitKey(1) & 0xFF == 27:
                     break
 
         cap.release()
         cv2.destroyAllWindows()
 
-    # Run the camera loop in a separate thread
     threading.Thread(target=run_camera, daemon=True).start()
-
-    # Wait for the selection event or GUI close
     root.protocol("WM_DELETE_WINDOW", root.quit)
     root.mainloop()
+    if selected_device[0] and selected_device[0] not in registered_users:
+        root = tk.Tk()
+        root.withdraw()
+        if messagebox.askyesno("Register Device", f"Do you want to register the device '{selected_device[1]}' with MAC {selected_device[0]}?"):
+            save_registered_user(selected_device[0])
+            registered_users.add(selected_device[0])
+        root.destroy()
 
-    # Wait for the selection event from the camera thread
+        
     selection_event.wait()
     root.destroy()
-    # Show a welcome screen after the device is selected
-    if selected_device[1]:  # Use name of the selected device
+    if selected_device[0]:
+        print(f"Welcome! Device selected: {selected_device[1]}")
         root = tk.Tk()
         root.title("Welcome Screen")
         root.geometry("400x200")
@@ -188,12 +179,14 @@ def bluetooth_login():
         root.after(3000, close_welcome_screen)
 
         root.mainloop()
-
-    return selected_device[0]  # Return the selected device's MAC address
-
-if __name__ == "__main__":
-    selected_device = bluetooth_login()
-    if selected_device:
-        print(f"Successfully selected device with MAC address: {selected_device}")
+        return selected_device[0]
     else:
         print("No device selected.")
+        return None
+
+#if __name__ == "__main__":
+    #selected_device = bluetooth_login()
+    #if selected_device:
+        #print(f"Successfully logged in with device MAC address: {selected_device}")
+    #else:
+        #print("No device selected or registered.")
