@@ -99,7 +99,7 @@ def run_yolo_model():
     model = YOLO('Versions/best.pt')
 
     # Open video capture
-    cap = cv2.VideoCapture(1)  # Use the primary camera
+    cap = cv2.VideoCapture(0)  # Use the primary camera
 
     if not cap.isOpened():
         print("Failed to open camera.")

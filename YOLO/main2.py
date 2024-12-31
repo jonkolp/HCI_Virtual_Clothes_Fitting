@@ -22,7 +22,7 @@ if __name__ == "__main__":
     mp_hands = mp.solutions.hands
     mp_drawing = mp.solutions.drawing_utils
     
-    cap = cv2.VideoCapture(1)  # Open the primary camera
+    cap = cv2.VideoCapture(0)  # Open the primary camera
     # Global variables to manage Mediapipe process
     mediapipe_running = False
     mediapipe_process = None
