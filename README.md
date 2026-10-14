@@ -16,6 +16,8 @@
 
 [Key Findings](#-empirical-hci-findings-tui-vs-vision) •
 [Architecture](#-system-architecture) •
+[Research Paper](docs/HCI_PAPER.pdf) •
+[Demo Videos](videos/) •
 [Quickstart](#-quickstart--installation) •
 [Repository Layout](#-repository-structure) •
 [Future Work Roadmap](docs/FUTURE_WORK.md)
@@ -33,6 +35,9 @@ Traditional virtual fitting rooms often reduce the experience to a static 2D pre
 * How can edge deep learning (YOLOv8) and 3D Augmented Reality (Unity + Vuforia) merge into a zero-latency spatial interface?
 
 Originally seeded through human-computer interaction research at **MSA University** (Faculty of Computer Science, Giza, Egypt), this repository serves as an **exploratory codebase** to test, challenge, and invent new paradigms in spatial retail interaction.
+
+* 📄 **Research Paper**: View the complete paper at [`docs/HCI_PAPER.pdf`](docs/HCI_PAPER.pdf)
+* 🎥 **Demonstration Recordings**: Watch interactive system runs in [`videos/`](videos/)
 
 ---
 
@@ -131,12 +136,16 @@ Virtual-Fitting-Room/
 ├── requirements.txt                           # Unified Python dependencies
 ├── .gitignore                                 # Git ignore rules (cache, virtualenvs, OS artifacts)
 │
-├── docs/                                      # Research & Academic Documentation
+├── docs/                                      # Centralized Research & Evaluation Documents
+│   ├── HCI_PAPER.pdf                          # MSA University published research paper (Full PDF)
 │   ├── FUTURE_WORK.md                         # Detailed HCI exploration roadmap & research questions
-│   ├── HCI_PAPER.pdf                          # MSA University published research paper
-│   ├── Virtual Fitting Room Evaluation Report.docx # Experimental evaluation benchmark report
+│   ├── Virtual Fitting Room Evaluation Report.docx # Experimental benchmark report (TUI vs. Vision)
 │   ├── PACT.docx                              # HCI Framework analysis (People, Activity, Context, Technology)
 │   └── Scenario.docx                          # User interaction scenarios & personas
+│
+├── videos/                                    # Demonstration Recordings & User Interaction Sessions
+│   ├── DEMO.mp4                               # Full Virtual Fitting Room system demonstration
+│   └── bandicam 2024-12-25 22-28-23-762.mp4   # Raw prototype interaction capture recording
 │
 ├── YOLO/                                      # Core Python Computer Vision & Try-On Pipeline
 │   ├── main2.py                               # Multi-modal entry point (Gesture menu ➔ Auth ➔ Fitting)
@@ -263,15 +272,7 @@ This exploration was originated as part of human-computer interaction coursework
 * **Youssef Abdelhamid**
 * **Mahmoud Ahmed**
 
-### Citation
-```bibtex
-@article{msa_vfr_2024,
-  title={Virtual Fitting Rooms: A Multi-Modal Comparative Study of Tangible and Vision-Based Interfaces},
-  author={Refaat, Hisham Ahmed and Ali, Abdelrahman and Hanafy, Youssef Ahmed and Helmy, Karim Emad and Abdelhamid, Youssef and Ahmed, Mahmoud},
-  institution={Faculty of Computer Science, MSA University},
-  year={2024}
-}
-```
+
 
 ---
 
