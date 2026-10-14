@@ -13,16 +13,20 @@ import time
 
 if __name__ == "__main__":
     print("Starting the system...")
-    #custom_model = YOLO('Versions/Hands.pt')q
-    #Monitor()
+    # custom_model = YOLO('Versions/Hands.pt')
+    # Monitor()
     flag = 0 
-    flag2= 0
+    flag2 = 0
     trigger_object = "Thumbs up"  # Define the object to trigger Mediapipe
     trigger_object2 = "Thumbs Down"
     mp_hands = mp.solutions.hands
     mp_drawing = mp.solutions.drawing_utils
     
-    cap = cv2.VideoCapture(0)  # Open the primary camera
+    # Open camera with fallback
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened() or not cap.read()[0]:
+        cap.release()
+        cap = cv2.VideoCapture(1)
     # Global variables to manage Mediapipe process
     mediapipe_running = False
     mediapipe_process = None

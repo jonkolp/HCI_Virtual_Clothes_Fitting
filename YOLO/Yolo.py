@@ -74,13 +74,17 @@ def detect_gesture(landmarks):
         return None
 
 
+import sys
+import os
+
 def run_mediapipe():
     """Launch Mediapipe in a separate process."""
     global mediapipe_process
     global mediapipe_running
     if mediapipe_process is None:
         mediapipe_running = True
-        mediapipe_process = subprocess.Popen(["python", "Mediapipe.py"])
+        script_path = os.path.join(os.path.dirname(__file__), "Mediapipe.py")
+        mediapipe_process = subprocess.Popen([sys.executable, script_path])
         print("Mediapipe started.")
 
 
@@ -96,10 +100,14 @@ def run_yolo_model():
     """
     Run a YOLO model to detect objects and display results in a window with annotations.
     """
-    model = YOLO('Versions/best.pt')
+    model_path = os.path.join(os.path.dirname(__file__), 'Versions', 'best.pt')
+    model = YOLO(model_path)
 
-    # Open video capture
-    cap = cv2.VideoCapture(0)  # Use the primary camera
+    # Open video capture with fallback
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened() or not cap.read()[0]:
+        cap.release()
+        cap = cv2.VideoCapture(1)
 
     if not cap.isOpened():
         print("Failed to open camera.")
@@ -134,8 +142,12 @@ def run_mediapipe_hand_detection():
         - Stop: Terminate program and launch `emotions.py`.
         - Right: Stop Mediapipe if running.
     """
-    cap = cv2.VideoCapture(1)  # Open the primary camera
-    last_gesture_time = 0 
+    # Open camera with fallback
+    cap = cv2.VideoCapture(1)
+    if not cap.isOpened() or not cap.read()[0]:
+        cap.release()
+        cap = cv2.VideoCapture(0)
+    last_gesture_time = 0
 
     with mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7) as hands:
         while cap.isOpened():

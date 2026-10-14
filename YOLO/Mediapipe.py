@@ -202,183 +202,166 @@ Point(229,476, 1),
 recognizer = Recognizer([swip_right,swip_left])
 
 
-framecnt=0
+framecnt = 0
 
-# Define paths to your folders
-shirts_folder = 'clothes/shirt'  
-pants_folder = 'clothes/pants'    
-sleeves_folder = 'clothes/sleeves'   
-hoodies_folder = 'clothes/hoodies' 
-
-shirts =  []
-sleeve =  []
-hoodies = []
+# Base directory for relative assets
+base_dir = os.path.dirname(os.path.abspath(__file__))
+shirts_folder = os.path.join(base_dir, 'clothes', 'shirt')  
+pants_folder = os.path.join(base_dir, 'clothes', 'pants')    
+sleeves_folder = os.path.join(base_dir, 'clothes', 'sleeves')   
+hoodies_folder = os.path.join(base_dir, 'clothes', 'hoodies') 
 
 def load_images_from_folder(folder):
     images = []
-    for filename in os.listdir(folder):
+    if not os.path.exists(folder):
+        return images
+    for filename in sorted(os.listdir(folder)):
         img_path = os.path.join(folder, filename)
-        if os.path.isfile(img_path): 
+        if os.path.isfile(img_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg')):
             img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
             if img is not None:  
-                print(img)
                 images.append(img)
+    print(f"Loaded {len(images)} templates from {os.path.basename(folder)}")
     return images
-
 
 shirts = load_images_from_folder(shirts_folder)
 sleeves = load_images_from_folder(sleeves_folder)
 hoodies = load_images_from_folder(hoodies_folder)
-
-
-
-
-
-
-print("---------------------------------------------------")
-print(sleeves)
-print("---------------------------------------------------")
 
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5,
     min_tracking_confidence=0.5)
 
-shirt_image = cv2.imread('T.png', cv2.IMREAD_UNCHANGED)
-hoodie_image = cv2.imread('H.png', cv2.IMREAD_UNCHANGED)
-
 switch = 0
-type = 0
-
-
+type = 0  # 0: shirts, 1: hoodies, 2: sleeves
 
 
 def recognize_gesture(captured_points):
-    global switch  
-    # Recognize gesture
-    result = recognizer.recognize(captured_points)
-    if result[0] == "swip_left":
-         print(f"Recognized Gesture: {result[0]} with score: {result[1]}")
-         return 2
-    elif result[0] == "swip_right":
-         print(f"Recognized Gesture: {result[0]} with score: {result[1]}")
-         return 1
-    else:
-        print("No gesture recognized.")
-        return False
+    # Recognize gesture using DollarPy $1 Unistroke recognizer
+    try:
+        result = recognizer.recognize(captured_points)
+        if result[0] == "swip_left":
+            print(f"Recognized Gesture: {result[0]} (Score: {result[1]:.2f})")
+            return 2
+        elif result[0] == "swip_right":
+            print(f"Recognized Gesture: {result[0]} (Score: {result[1]:.2f})")
+            return 1
+    except Exception as e:
+        print(f"Gesture recognition error: {e}")
+    return False
         
        
-       
-def overlay_shirt(image, landmarks, scale_factor= 2.0, y_offset=90):
-    global shirt_image, hoodie_image, switch
+def overlay_shirt(image, landmarks, scale_factor=2.0, y_offset=90):
+    global switch, type
 
-    if(type == 0):
-        selected_image = shirts[switch] 
-    
-    if(type == 1):
-        selected_image = hoodies[switch] 
-    
-    if(type == 2):
-        selected_image = sleeves[switch] 
-    
+    if type == 0 and shirts:
+        selected_image = shirts[switch % len(shirts)]
+    elif type == 1 and hoodies:
+        selected_image = hoodies[switch % len(hoodies)]
+    elif type == 2 and sleeves:
+        selected_image = sleeves[switch % len(sleeves)]
+    else:
+        return
+
     h, w = selected_image.shape[:2]
 
     left_shoulder = landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value]
     right_shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value]
 
     shoulder_width = int(abs(right_shoulder.x * image.shape[1] - left_shoulder.x * image.shape[1]) * scale_factor)
+    if shoulder_width <= 0:
+        return
     shirt_height = int(h * (shoulder_width / w))
+    if shirt_height <= 0:
+        return
+
     resized_image = cv2.resize(selected_image, (shoulder_width, shirt_height), interpolation=cv2.INTER_AREA)
 
     x = int((left_shoulder.x + right_shoulder.x) / 2 * image.shape[1]) - shoulder_width // 2
     y = int(left_shoulder.y * image.shape[0]) - shirt_height // 2 + y_offset
 
-    for i in range(shirt_height):
-        for j in range(shoulder_width):
-            if 0 <= y + i < image.shape[0] and 0 <= x + j < image.shape[1]: 
-                if resized_image.shape[2] == 4:  
-                    alpha = resized_image[i, j, 3] / 255.0
-                    if alpha > 0:
-                        image[y + i, x + j] = (1 - alpha) * image[y + i, x + j] + alpha * resized_image[i, j, :3]
-                else:
-                    image[y + i, x + j] = resized_image[i, j]
+    # Compute intersection bounding box with frame
+    x1, x2 = max(0, x), min(image.shape[1], x + shoulder_width)
+    y1, y2 = max(0, y), min(image.shape[0], y + shirt_height)
 
-Allpoints=[]
+    if x1 >= x2 or y1 >= y2:
+        return
+
+    overlay_x1, overlay_x2 = x1 - x, x2 - x
+    overlay_y1, overlay_y2 = y1 - y, y2 - y
+
+    overlay_crop = resized_image[overlay_y1:overlay_y2, overlay_x1:overlay_x2]
+    bg_crop = image[y1:y2, x1:x2]
+
+    # Vectorized Alpha Blending with NumPy
+    if overlay_crop.shape[2] == 4:
+        alpha = (overlay_crop[:, :, 3] / 255.0)[:, :, np.newaxis]
+        rgb_overlay = overlay_crop[:, :, :3]
+        image[y1:y2, x1:x2] = (1.0 - alpha) * bg_crop + alpha * rgb_overlay
+    else:
+        image[y1:y2, x1:x2] = overlay_crop
 
 
+Allpoints = []
 
+# Camera initialization with fallback support
 cap = cv2.VideoCapture(1)
+if not cap.isOpened() or not cap.read()[0]:
+    cap.release()
+    cap = cv2.VideoCapture(0)
+
+print("Starting Virtual Fitting Room overlay. Press 'Esc' to exit.")
 
 while cap.isOpened():
     success, frame = cap.read()
-     
-
     if not success:
         print("Can't receive frame (stream end?). Exiting ...")
         break
 
-    
     image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = pose.process(image_rgb)
 
-    
-
     if results.pose_landmarks:
         mp.solutions.drawing_utils.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-
         overlay_shirt(frame, results.pose_landmarks.landmark)
 
+        # Track right wrist position for gesture interaction
+        image_height, image_width, _ = frame.shape
+        wrist = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST]
+        x = int(wrist.x * image_width)
+        y = int(wrist.y * image_height)
+        Allpoints.append(Point(x, y, 1))
+
+        framecnt += 1
+        if framecnt % 9 == 0:
+            framecnt = 0
+            if len(Allpoints) > 1:
+                result = recognize_gesture(Allpoints)
+                if result == 2:  # swipe left: switch category
+                    type = (type + 1) % 3
+                    switch = 0
+                    cat_name = ["Shirts", "Hoodies", "Long Sleeves"][type]
+                    print(f"Switched category to: {cat_name}")
+                elif result == 1:  # swipe right: switch variant
+                    if type == 0 and shirts:
+                        switch = (switch + 1) % len(shirts)
+                    elif type == 1 and hoodies:
+                        switch = (switch + 1) % len(hoodies)
+                    elif type == 2 and sleeves:
+                        switch = (switch + 1) % len(sleeves)
+                    print(f"Switched variant to index: {switch}")
+            Allpoints.clear()
+
+    # Display HUD status
+    cat_names = ["Shirts", "Hoodies", "Long Sleeves"]
+    cv2.putText(frame, f"Category: {cat_names[type]} | Variant: #{switch + 1}", (20, 35),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+
     cv2.imshow('Shirt Overlay', frame)
-
-    framecnt+=1
-
-
-    try:
-        RGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-       
-        results = pose.process(RGB)
-            
-        image_hight, image_width, _ = frame.shape
-        x=(int(results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST].x * image_width))
-        y=(int(results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST].y * image_hight))
-        
-        Allpoints.append(Point(x,y,1))
-
-        if framecnt%9==0:
-              framecnt=0
-              result = recognize_gesture(Allpoints)
-              print (result)
-              if result == 2:
-                 if(type == 2):
-                    type = 0
-                 else :  
-                    type += 1
-              elif result == 1:
-                 if (type == 0):
-                    if(len(shirts) == switch):
-                        switch = 0
-                 elif (type == 1):
-                    if(len(hoodies) == switch):
-                        switch = 0
-                 elif (type == 2):
-                    if(len(sleeves) == switch):
-                        switch = 0
-                 else :  
-                    switch += 1
-                  
-
-                
-
-              Allpoints.clear()  
-        
-       
-        
-    except:
-            print ('Camera Error')
-    
 
     if cv2.waitKey(5) & 0xFF == 27:  # Press 'Esc' to exit
         break
 
 cap.release()
-cv2.destroyAllWindows()
+cv2.destroyAllWindows()

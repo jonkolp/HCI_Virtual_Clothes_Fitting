@@ -4,7 +4,12 @@ import cv2
 from functions import capture_user_face
 import time
 
-def recognize_user_face(captured_face_path, faces_folder="user_faces"):
+def recognize_user_face(captured_face_path, faces_folder=None):
+    if faces_folder is None:
+        faces_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_faces")
+
+    if not os.path.exists(faces_folder):
+        return None
 
     captured_image = face_recognition.load_image_file(captured_face_path)
     captured_encodings = face_recognition.face_encodings(captured_image)
@@ -48,7 +53,8 @@ def Face():
     else:
         matched_face = recognize_user_face(captured_face_path)
 
-        video_capture = cv2.VideoCapture(1)
+        from functions import get_camera
+        video_capture = get_camera(preferred=1, fallback=0)
 
         # Start the timer
         start_time = time.time()
@@ -78,6 +84,8 @@ def Face():
                         2,
                     )
                 else:
+                    video_capture.release()
+                    cv2.destroyAllWindows()
                     return None
                 
 
